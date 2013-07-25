@@ -7,7 +7,7 @@ public Plugin:myinfo =
 	author = "Alec Shields",
 	description = "A game mode where all players on both teams are the same class",
 	version = "0.1.0",
-	url = "https://github.com/awshields/tf2rush"
+	url = "https://github.com/shieldal/tf2rush"
 }
  
 public OnPluginStart()
