@@ -1,10 +1,10 @@
-#pragma semicolon 1
-
 #include <sourcemod>
 #include <sdktools>
+#include <tf2>
 #include <tf2_stocks>
+#include <adminmenu>
 
-#define PL_VERSION "0.1.1.0"
+#define PL_VERSION "0.2.0.0"
 
 #define TF_CLASS_DEMOMAN		4
 #define TF_CLASS_ENGINEER		9
@@ -23,12 +23,13 @@
 public Plugin:myinfo =
 {
 	name = "TF2 Rush Mode",
-	author = "Alec Shields",
+	author = "Alec \"Higgs\" Shields",
 	description = "A game mode where all players on both teams are the same class",
 	version = PL_VERSION,
 	url = "https://github.com/shieldal/tf2rush"
 }
  
+new Handle:hAdminMenu = INVALID_HANDLE
 new g_iClass[MAXPLAYERS + 1];
 new Handle:g_hEnabled;
 new Handle:g_hFlags;
@@ -67,7 +68,198 @@ public OnPluginStart()
 	HookEvent("player_spawn",       Event_PlayerSpawn);
 	HookEvent("player_team",        Event_PlayerTeam);
 
-	RegAdminCmd("sm_allScout", Command_AllScout, ADMFLAG_SLAY);
+	LoadTranslations("common.phrases")
+	new Handle:topmenu
+	if (LibraryExists("adminmenu") && ((topmenu = GetAdminTopMenu()) != INVALID_HANDLE))
+	{
+		OnAdminMenuReady(topmenu)
+	}
+
+	RegAdminCmd("sm_allscout", Command_AllScout, ADMFLAG_KICK);
+}
+
+public Action:Command_AllScout(client, args)
+{
+	for(new i = 2; i <= 3; i++)
+	{
+		for(new k = 1; k <= 9; k++)
+		{
+			if(k == 1)
+			{
+				SetConVarInt(g_hLimits[i][k], -1);
+			}
+			else 
+			{
+				SetConVarInt(g_hLimits[i][k], 0);
+			}
+		}
+	}
+
+	new target;
+	for(new i = 0; i < MAXPLAYERS; i++)
+	{
+		if (target = GetClientOfUserId(i))
+		{
+			PerformRespawnPlayer(client, target);
+		}
+	}
+
+	return Plugin_Handled;
+}
+
+SetToClass(client, targetClass)
+{
+	for(new i = 2; i <= 3; i++)
+	{
+		for(new k = 1; k <= 9; k++)
+		{
+			if(k == targetClass)
+			{
+				SetConVarInt(g_hLimits[i][k], -1);
+			}
+			else 
+			{
+				SetConVarInt(g_hLimits[i][k], 0);
+			}
+		}
+	}
+
+	new target;
+	for(new i = 0; i < MAXPLAYERS; i++)
+	{
+		if (target = GetClientOfUserId(i))
+		{
+			PerformRespawnPlayer(client, target);
+		}
+	}
+
+	return Plugin_Handled;
+}
+
+PerformRespawnPlayer(client,target)
+{
+	TF2_RespawnPlayer(target);
+	LogAction(client, target, "\"%L\" has respawned \"%L\"", client, target);
+	ReplyToCommand(client, "You have respawned %N.", target);
+	ShowActivity2(client, "", "%N has respawned %N.", client,target);
+
+	return Plugin_Handled;
+}
+
+public OnAdminMenuReady(Handle:topmenu)
+{
+	if (topmenu == hAdminMenu)
+	{
+		return;
+	}
+	
+	hAdminMenu = topmenu
+
+	new TopMenuObject:server_commands = FindTopMenuCategory(hAdminMenu, ADMINMENU_SERVERCOMMANDS) //player > server
+
+	if (server_commands != INVALID_TOPMENUOBJECT)
+	{
+		AddToTopMenu(hAdminMenu,
+			"sm_allscout",
+			TopMenuObject_Item,
+			AdminMenu_Particles, 
+			server_commands,
+			"sm_allScout",
+			ADMFLAG_KICK)
+	}
+}
+ 
+public AdminMenu_Particles( Handle:topmenu, TopMenuAction:action, TopMenuObject:object_id, param, String:buffer[], maxlength )
+{
+	if (action == TopMenuAction_DisplayOption)
+	{
+		Format(buffer, maxlength, "Select Rush Class")
+	}
+	else if( action == TopMenuAction_SelectOption)
+	{
+		DisplayClassMenu(param)
+	}
+}
+
+DisplayPlayerMenu(client)
+{
+	new Handle:menu = CreateMenu(MenuHandler_Players)
+	
+	decl String:title[100]
+	Format(title, sizeof(title), "Choose Player:")
+	SetMenuTitle(menu, title)
+	SetMenuExitBackButton(menu, true)
+	
+	AddTargetsToMenu(menu, client, true, true)
+	
+	DisplayMenu(menu, client, MENU_TIME_FOREVER)
+}
+
+DisplayClassMenu(client)
+{
+	new Handle:menu = CreateMenu(MenuHandler_Classes)
+	
+	decl String:title[100]
+	Format(title, sizeof(title), "Choose Class:")
+	SetMenuTitle(menu, title)
+	SetMenuExitBackButton(menu, true)
+	
+	AddMenuItem(menu, "1", "Scout");
+	AddMenuItem(menu, "3", "Soldier");
+	AddMenuItem(menu, "7", "Pyro");
+	AddMenuItem(menu, "4", "Demoman");
+	AddMenuItem(menu, "6", "Heavy");
+	AddMenuItem(menu, "9", "Engineer");
+	AddMenuItem(menu, "5", "Medic");
+	AddMenuItem(menu, "2", "Sniper");
+	AddMenuItem(menu, "8", "Spy");
+	
+	DisplayMenu(menu, client, MENU_TIME_FOREVER)
+}
+
+public MenuHandler_Classes(Handle:menu, MenuAction:action, param1, param2)
+{
+	if (action == MenuAction_End)
+	{
+		CloseHandle(menu)
+	}
+	else if (action == MenuAction_Cancel)
+	{
+		if (param2 == MenuCancel_ExitBack && hAdminMenu != INVALID_HANDLE)
+		{
+			DisplayTopMenu(hAdminMenu, param1, TopMenuPosition_LastCategory);
+		}
+	}
+	else if (action == MenuAction_Select)
+	{
+		decl String:info[32]
+		new userid, target
+		
+		GetMenuItem(menu, param2, info, sizeof(info))
+
+		target = StringToInt(info)
+
+		SetToClass(param1, target)
+
+		// if ((target = GetClientOfUserId(userid)) == 0)
+		// {
+		// 	PrintToChat(param1, "[SM] %s", "Player no longer available")
+		// }
+		// else if (!CanUserTarget(param1, target))
+		// {
+		// 	PrintToChat(param1, "[SM] %s", "Unable to target")
+		// }
+		// else
+		// {			
+		// 	PerformRespawnPlayer(param1, target)
+		// 	if (IsClientInGame(param1) && !IsClientInKickQueue(param1))
+		// 	{
+		// 		DisplayPlayerMenu(param1)
+		// 	}
+			
+		// }
+	}
+
 }
 
 public OnMapStart()
@@ -192,48 +384,4 @@ PickClass(iClient)
 		else if(i == iClass)
 			break;
 	}
-}
-
-public Action:Command_AllScout(client, args)
-{
-	for(new i = 2; i <= 3; i++)
-	{
-		for(new k = 1; k <= 9; k++)
-		{
-			if(k == 1)
-			{
-				SetConVarInt(g_hLimits[i][k], -1);
-			}
-			else 
-			{
-				SetConVarInt(g_hLimits[i][k], 0);
-			}
-		}
-	}
-
-	new String:target_name[MAX_TARGET_LENGTH];
-	new target_list[MAXPLAYERS], target_count;
-	new bool:tn_is_ml;
- 
-	if ((target_count = ProcessTargetString(
-			"",
-			client,
-			target_list,
-			MAXPLAYERS,
-			COMMAND_FILTER_ALIVE, /* Only allow alive players */
-			target_name,
-			sizeof(target_name),
-			tn_is_ml)) <= 0)
-	{
-		/* This function replies to the admin with a failure message */
-		ReplyToTargetError(client, target_count);
-		return Plugin_Handled;
-	}
-
-	for (new i = 0; i < target_count; i++)
-	{
-		TF2_RegeneratePlayer(target_list[i]);
-	}
-
-	return Plugin_Handled;
 }
