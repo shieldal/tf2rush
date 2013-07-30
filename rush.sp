@@ -75,34 +75,18 @@ public OnPluginStart()
 		OnAdminMenuReady(topmenu)
 	}
 
-	RegAdminCmd("sm_allscout", Command_AllScout, ADMFLAG_KICK);
+	RegAdminCmd("sm_setrush", Command_SetRush, ADMFLAG_KICK);
 }
 
-public Action:Command_AllScout(client, args)
+public Action:Command_SetRush(client, args)
 {
-	for(new i = 2; i <= 3; i++)
-	{
-		for(new k = 1; k <= 9; k++)
-		{
-			if(k == 1)
-			{
-				SetConVarInt(g_hLimits[i][k], -1);
-			}
-			else 
-			{
-				SetConVarInt(g_hLimits[i][k], 0);
-			}
-		}
-	}
+	new String:classRaw[3];
+	new classTarget;
+		GetCmdArg(1, classRaw, sizeof(classRaw));
 
-	new target;
-	for(new i = 0; i < MAXPLAYERS; i++)
-	{
-		if (target = GetClientOfUserId(i))
-		{
-			PerformRespawnPlayer(client, target);
-		}
-	}
+	classTarget = StringToInt(classRaw);
+
+	SetToClass(client, classTarget);
 
 	return Plugin_Handled;
 }
@@ -160,11 +144,11 @@ public OnAdminMenuReady(Handle:topmenu)
 	if (server_commands != INVALID_TOPMENUOBJECT)
 	{
 		AddToTopMenu(hAdminMenu,
-			"sm_allscout",
+			"sm_setrush",
 			TopMenuObject_Item,
 			AdminMenu_Particles, 
 			server_commands,
-			"sm_allScout",
+			"sm_setrush",
 			ADMFLAG_KICK)
 	}
 }
@@ -173,7 +157,7 @@ public AdminMenu_Particles( Handle:topmenu, TopMenuAction:action, TopMenuObject:
 {
 	if (action == TopMenuAction_DisplayOption)
 	{
-		Format(buffer, maxlength, "Select Rush Class")
+		Format(buffer, maxlength, "Set Rush Class")
 	}
 	else if( action == TopMenuAction_SelectOption)
 	{
@@ -240,24 +224,6 @@ public MenuHandler_Classes(Handle:menu, MenuAction:action, param1, param2)
 		target = StringToInt(info)
 
 		SetToClass(param1, target)
-
-		// if ((target = GetClientOfUserId(userid)) == 0)
-		// {
-		// 	PrintToChat(param1, "[SM] %s", "Player no longer available")
-		// }
-		// else if (!CanUserTarget(param1, target))
-		// {
-		// 	PrintToChat(param1, "[SM] %s", "Unable to target")
-		// }
-		// else
-		// {			
-		// 	PerformRespawnPlayer(param1, target)
-		// 	if (IsClientInGame(param1) && !IsClientInKickQueue(param1))
-		// 	{
-		// 		DisplayPlayerMenu(param1)
-		// 	}
-			
-		// }
 	}
 
 }
