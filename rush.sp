@@ -93,6 +93,23 @@ public Action:Command_SetRush(client, args)
 
 SetToClass(client, targetClass)
 {
+	if(targetClass == 11)
+	{
+		for(new i = 2; i <= 3; i++)
+		{
+			for(new k = 1; k <= 9; k++)
+			{
+				SetConVarInt(g_hLimits[i][k], -1);
+			}
+		}
+		return Plugin_Handled;
+	}
+
+	if(targetClass == 10)
+	{
+		targetClass = GetRandomInt(TF_CLASS_SCOUT, TF_CLASS_ENGINEER)
+	}
+
 	for(new i = 2; i <= 3; i++)
 	{
 		for(new k = 1; k <= 9; k++)
@@ -183,6 +200,8 @@ DisplayClassMenu(client)
 	AddMenuItem(menu, "5", "Medic");
 	AddMenuItem(menu, "2", "Sniper");
 	AddMenuItem(menu, "8", "Spy");
+	AddMenuItem(menu, "10", "Random");
+	AddMenuItem(menu, "11", "Normal");
 	
 	DisplayMenu(menu, client, MENU_TIME_FOREVER)
 }
