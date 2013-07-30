@@ -165,20 +165,6 @@ public AdminMenu_Particles( Handle:topmenu, TopMenuAction:action, TopMenuObject:
 	}
 }
 
-DisplayPlayerMenu(client)
-{
-	new Handle:menu = CreateMenu(MenuHandler_Players)
-	
-	decl String:title[100]
-	Format(title, sizeof(title), "Choose Player:")
-	SetMenuTitle(menu, title)
-	SetMenuExitBackButton(menu, true)
-	
-	AddTargetsToMenu(menu, client, true, true)
-	
-	DisplayMenu(menu, client, MENU_TIME_FOREVER)
-}
-
 DisplayClassMenu(client)
 {
 	new Handle:menu = CreateMenu(MenuHandler_Classes)
